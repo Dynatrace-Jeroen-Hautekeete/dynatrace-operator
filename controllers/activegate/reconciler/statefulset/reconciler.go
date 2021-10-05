@@ -143,7 +143,7 @@ func (r *Reconciler) buildDesiredStatefulSet() (*appsv1.StatefulSet, error) {
 
 	stsProperties := NewStatefulSetProperties(
 		r.Instance, r.capability, kubeUID, cpHash, r.feature, r.capabilityName, r.serviceAccountOwner,
-		major, minor, r.initContainersTemplates, r.containerVolumeMounts, r.volumes)
+		major, minor, r.initContainersTemplates, r.containerVolumeMounts, r.volumes, r.log)
 	stsProperties.OnAfterCreateListener = r.onAfterStatefulSetCreateListener
 
 	desiredSts, err := CreateStatefulSet(stsProperties)
