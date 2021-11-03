@@ -71,7 +71,7 @@ func setCommunicationsPort(dk *dynatracev1beta1.DynaKube) events.StatefulSetEven
 				ContainerPort: containerPort,
 			},
 		}
-		if dk.FeatureEnableStatsDIngest() {
+		if dk.NeedsStatsD() {
 			// TODO Refactor (access containers by name instead of index)
 			sts.Spec.Template.Spec.Containers[2].Ports = []corev1.ContainerPort{
 				{

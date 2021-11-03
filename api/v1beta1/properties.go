@@ -236,3 +236,15 @@ func (dk *DynaKube) CommunicationHosts() []dtclient.CommunicationHost {
 	}
 	return communicationHosts
 }
+
+func (dk *DynaKube) NeedsStatsD() bool {
+	if dk.FeatureEnableStatsDIngest() {
+		return true
+	}
+	for _, capability := range dk.Spec.ActiveGate.Capabilities {
+		if capability == StatsDIngestCapability.DisplayName {
+			return true
+		}
+	}
+	return false
+}
