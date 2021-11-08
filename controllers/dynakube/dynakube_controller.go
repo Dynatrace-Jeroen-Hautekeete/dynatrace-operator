@@ -214,7 +214,7 @@ func (r *ReconcileDynaKube) reconcileDynaKube(ctx context.Context, dkState *cont
 
 	// Check Code Modules if CSI driver is needed
 	err = dtcsi.ConfigureCSIDriver(
-		r.client, r.scheme, r.operatorPodName, r.operatorNamespace, dkState, defaultUpdateInterval)
+		r.client, r.apiReader, r.scheme, r.operatorPodName, r.operatorNamespace, dkState, defaultUpdateInterval)
 	if err != nil {
 		dkState.Log.Error(err, "could not check code modules")
 		return

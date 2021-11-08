@@ -17,11 +17,11 @@ import (
 )
 
 func ConfigureCSIDriver(
-	client client.Client, scheme *runtime.Scheme, operatorPodName, operatorNamespace string,
+	client client.Client, apiReader client.Reader, scheme *runtime.Scheme, operatorPodName, operatorNamespace string,
 	dkState *controllers.DynakubeState, updateInterval time.Duration) error {
 
 	if dkState.Instance.NeedsCSIDriver() {
-		err := addDynakubeOwnerReference(client, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
+		err := addDynakubeOwnerReference(client, apiReader, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
 		if err != nil {
 			return err
 		}
@@ -37,10 +37,10 @@ func ConfigureCSIDriver(
 // addDynakubeOwnerReference enables csi driver, by creating its DaemonSet (if it does not exist yet)
 // and adds the current Dynakube to the OwnerReferences of the DaemonSet
 func addDynakubeOwnerReference(
-	client client.Client, scheme *runtime.Scheme, operatorPodName string, operatorNamespace string,
+	client client.Client, apiReader client.Reader, scheme *runtime.Scheme, operatorPodName string, operatorNamespace string,
 	dkState *controllers.DynakubeState, updateInterval time.Duration) error {
 
-	csiDaemonSet, err := getCSIDaemonSet(client, dkState.Instance.Namespace)
+	csiDaemonSet, err := getCSIDaemonSet(apiReader, dkState.Instance.Namespace)
 
 	if k8serrors.IsNotFound(err) || csiDaemonSet != nil {
 		upd, err := createOrUpdateCSIDaemonSet(client, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
@@ -139,9 +139,9 @@ func createOwnerReference(dynakube *dynatracev1beta1.DynaKube) metav1.OwnerRefer
 	}
 }
 
-func getCSIDaemonSet(clt client.Client, namespace string) (*appsv1.DaemonSet, error) {
+func getCSIDaemonSet(apiReader client.Reader, namespace string) (*appsv1.DaemonSet, error) {
 	csiDaemonSet := &appsv1.DaemonSet{}
-	err := clt.Get(context.TODO(),
+	err := apiReader.Get(context.TODO(),
 		client.ObjectKey{
 			Name:      DaemonSetName,
 			Namespace: namespace,
