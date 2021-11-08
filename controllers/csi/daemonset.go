@@ -3,6 +3,7 @@ package dtcsi
 import (
 	"context"
 	"encoding/json"
+
 	dynatracev1beta1 "github.com/Dynatrace/dynatrace-operator/api/v1beta1"
 	"github.com/Dynatrace/dynatrace-operator/controllers/kubeobjects"
 	"github.com/go-logr/logr"
@@ -153,6 +154,10 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 	resourcesMap map[string]corev1.ResourceList, tolerations []corev1.Toleration) *appsv1.DaemonSet {
 	labels := prepareDaemonSetLabels()
 
+	if dynakube.Image() != operatorImage{
+		operatorImage = dynakube.Image()
+	}
+
 	return &appsv1.DaemonSet{
 		ObjectMeta: prepareMetadata(operatorNamespace, dynakube),
 		Spec: appsv1.DaemonSetSpec{
@@ -163,7 +168,7 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 				Type: "RollingUpdate",
 				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
 					MaxUnavailable: &intstr.IntOrString{
-						Type: intstr.Int,
+						Type:   intstr.Int,
 						IntVal: 1,
 					},
 				},
