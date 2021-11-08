@@ -177,7 +177,7 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						prepareDriverContainer("operatorImage", resourcesMap),
+						prepareDriverContainer(operatorImage, resourcesMap),
 						prepareRegistrarContainer(operatorImage, resourcesMap),
 						prepareLivenessProbeContainer(operatorImage, resourcesMap),
 					},
