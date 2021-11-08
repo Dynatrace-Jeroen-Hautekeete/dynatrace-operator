@@ -3,7 +3,6 @@ package dtcsi
 import (
 	"context"
 	"encoding/json"
-
 	dynatracev1beta1 "github.com/Dynatrace/dynatrace-operator/api/v1beta1"
 	"github.com/Dynatrace/dynatrace-operator/controllers/kubeobjects"
 	"github.com/go-logr/logr"
@@ -160,6 +159,15 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
+			UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+				Type: "RollingUpdate",
+				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
+					MaxUnavailable: &intstr.IntOrString{
+						Type: intstr.Int,
+						IntVal: 1,
+					},
+				},
+			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -169,7 +177,7 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
-						prepareDriverContainer(operatorImage, resourcesMap),
+						prepareDriverContainer("operatorImage", resourcesMap),
 						prepareRegistrarContainer(operatorImage, resourcesMap),
 						prepareLivenessProbeContainer(operatorImage, resourcesMap),
 					},
