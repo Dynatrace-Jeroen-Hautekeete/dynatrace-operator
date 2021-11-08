@@ -154,10 +154,6 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 	resourcesMap map[string]corev1.ResourceList, tolerations []corev1.Toleration) *appsv1.DaemonSet {
 	labels := prepareDaemonSetLabels()
 
-	if dynakube.Image() != operatorImage{
-		operatorImage = dynakube.Image()
-	}
-
 	return &appsv1.DaemonSet{
 		ObjectMeta: prepareMetadata(operatorNamespace, dynakube),
 		Spec: appsv1.DaemonSetSpec{
