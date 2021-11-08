@@ -41,8 +41,9 @@ func addDynakubeOwnerReference(
 	dkState *controllers.DynakubeState, updateInterval time.Duration) error {
 
 	csiDaemonSet, err := getCSIDaemonSet(client, dkState.Instance.Namespace)
-	if k8serrors.IsNotFound(err) {
-		upd, err := createCSIDaemonSet(client, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
+
+	if k8serrors.IsNotFound(err) || csiDaemonSet != nil {
+		upd, err := createOrUpdateCSIDaemonSet(client, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
 		if err != nil || upd {
 			return err
 		}
@@ -53,7 +54,7 @@ func addDynakubeOwnerReference(
 	return addToOwnerReference(client, csiDaemonSet, dkState)
 }
 
-func createCSIDaemonSet(
+func createOrUpdateCSIDaemonSet(
 	client client.Client, scheme *runtime.Scheme, operatorPodName string, operatorNamespace string,
 	dkState *controllers.DynakubeState, updateInterval time.Duration) (bool, error) {
 

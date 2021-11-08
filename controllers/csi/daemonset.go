@@ -160,15 +160,6 @@ func prepareDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatra
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
-			UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
-				Type: "RollingUpdate",
-				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
-					MaxUnavailable: &intstr.IntOrString{
-						Type:   intstr.Int,
-						IntVal: 1,
-					},
-				},
-			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
