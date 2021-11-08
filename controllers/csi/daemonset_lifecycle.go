@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	dynatracev1beta1 "github.com/Dynatrace/dynatrace-operator/api/v1beta1"
 	"github.com/Dynatrace/dynatrace-operator/controllers"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -12,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,18 +38,12 @@ func addDynakubeOwnerReference(
 	client client.Client, apiReader client.Reader, scheme *runtime.Scheme, operatorPodName string, operatorNamespace string,
 	dkState *controllers.DynakubeState, updateInterval time.Duration) error {
 
-	csiDaemonSet, err := getCSIDaemonSet(apiReader, dkState.Instance.Namespace)
-
-	if k8serrors.IsNotFound(err) || csiDaemonSet != nil {
-		upd, err := createOrUpdateCSIDaemonSet(client, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
-		if err != nil || upd {
-			return err
-		}
-	} else if err != nil {
+	_, err := createOrUpdateCSIDaemonSet(client, scheme, operatorPodName, operatorNamespace, dkState, updateInterval)
+	if err != nil {
 		return err
 	}
 
-	return addToOwnerReference(client, csiDaemonSet, dkState)
+	return nil
 }
 
 func createOrUpdateCSIDaemonSet(
@@ -68,18 +60,6 @@ func createOrUpdateCSIDaemonSet(
 		return true, nil
 	}
 	return false, nil
-}
-
-func addToOwnerReference(client client.Client, csiDaemonSet *appsv1.DaemonSet, dkState *controllers.DynakubeState) error {
-	for _, ownerReference := range csiDaemonSet.OwnerReferences {
-		if ownerReference.UID == dkState.Instance.UID {
-			// Dynakube already defined as Owner of CSI DaemonSet
-			return nil
-		}
-	}
-
-	csiDaemonSet.OwnerReferences = append(csiDaemonSet.OwnerReferences, createOwnerReference(dkState.Instance))
-	return client.Update(context.TODO(), csiDaemonSet)
 }
 
 // removeDynakubeOwnerReference removes the current Dynakube from the OwnerReferences of the DaemonSet
@@ -126,17 +106,6 @@ func findOwnerReferenceIndex(ownerReferences []metav1.OwnerReference, instanceUI
 		}
 	}
 	return 0, false
-}
-
-func createOwnerReference(dynakube *dynatracev1beta1.DynaKube) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion:         dynakube.APIVersion,
-		Kind:               dynakube.Kind,
-		Name:               dynakube.Name,
-		UID:                dynakube.UID,
-		Controller:         pointer.BoolPtr(false),
-		BlockOwnerDeletion: pointer.BoolPtr(false),
-	}
 }
 
 func getCSIDaemonSet(apiReader client.Reader, namespace string) (*appsv1.DaemonSet, error) {

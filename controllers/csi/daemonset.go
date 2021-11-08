@@ -10,11 +10,11 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -90,12 +90,47 @@ func (r *Reconciler) Reconcile() (bool, error) {
 		return false, errors.WithStack(err)
 	}
 
+	err = updateOwnerReferences(r.client, ds)
+	if err != nil {
+		return false, err
+	}
+
+	err = setHash(ds)
+	if err != nil {
+		return false, err
+	}
+
 	upd, err := kubeobjects.CreateOrUpdateDaemonSet(r.client, r.logger, ds)
 	if upd || err != nil {
 		return upd, errors.WithStack(err)
 	}
 
 	return false, nil
+}
+
+func updateOwnerReferences(client client.Client, desiredDs *appsv1.DaemonSet) error {
+	actualDs, err := kubeobjects.GetDaemonSet(client, desiredDs)
+	if k8serrors.IsNotFound(err) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+
+	combinedOwnerReferences := kubeobjects.AddToOwnerReference(&actualDs.ObjectMeta, desiredDs.OwnerReferences[0])
+	if combinedOwnerReferences != nil {
+		desiredDs.OwnerReferences = combinedOwnerReferences
+	}
+	return nil
+}
+
+func setHash(ds *appsv1.DaemonSet) error {
+	dsHash, err := kubeobjects.GenerateHash(ds)
+	if err != nil {
+		return err
+	}
+	ds.Annotations[kubeobjects.AnnotationHash] = dsHash
+
+	return nil
 }
 
 func (r *Reconciler) getOperatorImage() (string, error) {
@@ -140,12 +175,6 @@ func loadAnnotationTolerations(annotations map[string]string) ([]corev1.Tolerati
 func buildDesiredCSIDaemonSet(operatorImage, operatorNamespace string, dynakube *dynatracev1beta1.DynaKube,
 	resourcesMap map[string]corev1.ResourceList, tolerations []corev1.Toleration) (*appsv1.DaemonSet, error) {
 	ds := prepareDaemonSet(operatorImage, operatorNamespace, dynakube, resourcesMap, tolerations)
-
-	dsHash, err := kubeobjects.GenerateHash(ds)
-	if err != nil {
-		return nil, err
-	}
-	ds.Annotations[kubeobjects.AnnotationHash] = dsHash
 
 	return ds, nil
 }
@@ -198,14 +227,7 @@ func prepareMetadata(namespace string, dynakube *dynatracev1beta1.DynaKube) meta
 		},
 		Annotations: map[string]string{},
 		OwnerReferences: []metav1.OwnerReference{
-			{
-				APIVersion:         dynakube.APIVersion,
-				Kind:               dynakube.Kind,
-				Name:               dynakube.Name,
-				UID:                dynakube.UID,
-				Controller:         pointer.BoolPtr(false),
-				BlockOwnerDeletion: pointer.BoolPtr(false),
-			},
+			kubeobjects.CreateOwnerReference(dynakube),
 		},
 	}
 }
